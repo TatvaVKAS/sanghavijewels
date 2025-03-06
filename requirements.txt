@@ -69,7 +69,6 @@ spacy==3.7.2
 spacy-legacy==3.0.12
 spacy-loggers==1.0.5
 srsly==2.4.8
-TA-Lib==0.4.25
 thinc==8.2.2
 tqdm==4.66.1
 trio==0.29.0
