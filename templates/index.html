@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jewelry Price Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <!-- Navbar -->
+    <div class="bg-blue-600 text-white p-3 flex justify-between items-center shadow-md">
+        <span id="gold_price" class="text-lg font-semibold">Gold: Loading...</span>
+        <span id="silver_price" class="text-lg font-semibold">Silver: Loading...</span>
+        <span id="exchange_rate" class="text-lg font-semibold">INR to USD: Loading...</span>
+        <button onclick="setRates()" class="bg-white text-blue-600 px-4 py-2 rounded shadow">Set Daily Rates</button>
+    </div>
+
+    <!-- Main Container -->
+    <div class="max-w-lg mx-auto mt-8 p-6 bg-white shadow-lg rounded-lg">
+        <h2 class="text-2xl font-bold mb-4 text-center">VKAS JEWELLERY CALCULATOR</h2>
+        
+        <label class="block mb-2">Product Weight (g):</label>
+        <input type="number" id="product_weight" class="w-full p-2 border rounded mb-4" placeholder="Enter weight in grams">
+        
+        <label class="block mb-2">Total Carat (ct):</label>
+        <input type="number" id="total_carat" class="w-full p-2 border rounded mb-4" placeholder="Total carat used">
+        
+        <label class="block mb-2">Price per Carat (Natural):</label>
+        <input type="number" id="natural_price" class="w-full p-2 border rounded mb-4" placeholder="Enter price">
+        
+        <label class="block mb-2">Price per Carat (Moissanite):</label>
+        <input type="number" id="moissanite_price" class="w-full p-2 border rounded mb-4" placeholder="Enter price">
+        
+        <label class="block mb-2">Price per Carat (Lab-Grown):</label>
+        <input type="number" id="lab_grown_price" class="w-full p-2 border rounded mb-4" placeholder="Enter price">
+        
+        <button onclick="calculatePrice()" class="w-full bg-blue-600 text-white py-2 rounded shadow hover:bg-blue-700">Calculate</button>
+    </div>
+
+    <!-- Results Section -->
+    <div id="result" class="max-w-lg mx-auto mt-6"></div>
+
+    <script>
+        async function setRates() {
+            const gold_rate = parseFloat(prompt("Enter today's Gold Rate (per gram):")) || 0;
+            const silver_rate = parseFloat(prompt("Enter today's Silver Rate (per gram):")) || 0;
+            const exchange_rate = parseFloat(prompt("Enter INR to USD exchange rate:")) || 90;
+
+            await fetch('/set_rates', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ gold_rate, silver_rate, exchange_rate })
+            });
+
+            updateLivePrices();
+        }
+
+        async function updateLivePrices() {
+            const response = await fetch('/get_rates');
+            const prices = await response.json();
+            if (prices.error) {
+                document.getElementById("gold_price").innerText = "Set today's rates!";
+                document.getElementById("silver_price").innerText = "";
+                document.getElementById("exchange_rate").innerText = "";
+            } else {
+                document.getElementById("gold_price").innerText = `Gold: ₹${prices.gold_rate} per gram`;
+                document.getElementById("silver_price").innerText = `Silver: ₹${prices.silver_rate} per gram`;
+                document.getElementById("exchange_rate").innerText = `INR to USD: ₹${prices.exchange_rate}`;
+            }
+        }
+
+        window.onload = updateLivePrices;
+
+        async function calculatePrice() {
+            const data = {
+                product_weight: parseFloat(document.getElementById("product_weight").value) || 0,
+                total_carat: parseFloat(document.getElementById("total_carat").value) || 0,
+                natural_price: parseFloat(document.getElementById("natural_price").value) || 0,
+                moissanite_price: parseFloat(document.getElementById("moissanite_price").value) || 0,
+                lab_grown_price: parseFloat(document.getElementById("lab_grown_price").value) || 0
+            };
+            
+            const response = await fetch('/calculate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const results = await response.json();
+            let output = '';
+            
+            if (results.error) {
+                output = `<p class='text-red-500 text-center'>Error: ${results.error}</p>`;
+            } else {
+                output = `<div class='mt-6 p-4 bg-white shadow-lg rounded-lg'>`;
+                for (let metal in results) {
+                    const r = results[metal];
+                    output += `
+                        <div class="border-b pb-4 mb-4">
+                            <h3 class="text-xl font-bold text-blue-600">${metal.replace('_', ' ').toUpperCase()}</h3>
+                            <p><strong>Total Costs:</strong></p>
+                            <ul class='list-disc pl-5'>
+                                <li>Natural: ₹${r.total_costs.natural.toLocaleString()} ($${(r.total_costs.natural / results.exchange_rate).toFixed(2)})</li>
+                                <li>Moissanite: ₹${r.total_costs.moissanite.toLocaleString()} ($${(r.total_costs.moissanite / results.exchange_rate).toFixed(2)})</li>
+                                <li>Lab-Grown: ₹${r.total_costs.lab_grown.toLocaleString()} ($${(r.total_costs.lab_grown / results.exchange_rate).toFixed(2)})</li>
+                            </ul>
+                        </div>`;
+                }
+                output += `</div>`;
+            }
+            document.getElementById("result").innerHTML = output;
+        }
+    </script><script>
+    async function calculatePrice() {
+        const data = {
+            product_weight: parseFloat(document.getElementById("product_weight").value) || 0,
+            total_carat: parseFloat(document.getElementById("total_carat").value) || 0,
+            natural_price: parseFloat(document.getElementById("natural_price").value) || 0,
+            moissanite_price: parseFloat(document.getElementById("moissanite_price").value) || 0,
+            lab_grown_price: parseFloat(document.getElementById("lab_grown_price").value) || 0
+        };
+
+        try {
+            const response = await fetch('/calculate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const responseData = await response.json();
+            console.log(responseData);  // ✅ Debugging: Logs response in console
+
+            if (responseData.error) {
+                document.getElementById("result").innerHTML = `<p class='text-red-500 text-center'>Error: ${responseData.error}</p>`;
+                return;
+            }
+
+            const exchangeRate = responseData.exchange_rate;
+            const results = responseData.results;
+            let output = `<div class='mt-6 p-4 bg-white shadow-lg rounded-lg'>`;
+
+            for (let metal in results) {
+                output += `
+                    <div class="border-b pb-4 mb-4">
+                        <h3 class="text-xl font-bold text-blue-600">${metal.replace('_', ' ').toUpperCase()}</h3>
+                        <p><strong>Total Costs:</strong></p>
+                        <ul class='list-disc pl-5'>
+                            <li>Natural: ₹${results[metal].total_costs_inr.natural.toLocaleString()} ($${results[metal].total_costs_usd.natural.toFixed(2)})</li>
+                            <li>Moissanite: ₹${results[metal].total_costs_inr.moissanite.toLocaleString()} ($${results[metal].total_costs_usd.moissanite.toFixed(2)})</li>
+                            <li>Lab-Grown: ₹${results[metal].total_costs_inr.lab_grown.toLocaleString()} ($${results[metal].total_costs_usd.lab_grown.toFixed(2)})</li>
+                        </ul>
+                    </div>`;
+            }
+
+            output += `</div>`;
+            document.getElementById("result").innerHTML = output;
+
+        } catch (error) {
+            console.error("Fetch Error:", error); // ✅ Debugging Error in Console
+            document.getElementById("result").innerHTML = `<p class='text-red-500 text-center'>Error: Failed to fetch data</p>`;
+        }
+    }
+</script>
+</body>
+</html>
